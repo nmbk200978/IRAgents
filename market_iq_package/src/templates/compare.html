@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial KB - Compare Companies</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Financial Knowledge Base</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/search">Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/metrics">Metrics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/compare">Compare</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/insights">Insights</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/filings">Filings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Compare Companies</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="card-title mb-0">Compare Financial Metrics</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('compare') }}" method="post">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Companies</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="selectAll">
+                                            <label class="form-check-label" for="selectAll">
+                                                Select All
+                                            </label>
+                                        </div>
+                                        <div class="company-checkboxes">
+                                            {% for company in companies %}
+                                            <div class="form-check">
+                                                <input class="form-check-input company-checkbox" type="checkbox" name="tickers" value="{{ company.ticker }}" id="company{{ loop.index }}" {% if company.ticker in selected_tickers %}checked{% endif %}>
+                                                <label class="form-check-label" for="company{{ loop.index }}">
+                                                    {{ company.ticker }} - {{ company.name }}
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="metric" class="form-label">Select Metric</label>
+                                        <select class="form-select" id="metric" name="metric" required>
+                                            <option value="">Choose a metric</option>
+                                            {% for metric in metrics %}
+                                            <option value="{{ metric }}" {% if metric == selected_metric %}selected{% endif %}>{{ metric }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="period" class="form-label">Period</label>
+                                        <select class="form-select" id="period" name="period">
+                                            <option value="Annual" {% if selected_period == 'Annual' %}selected{% endif %}>Annual</option>
+                                            <option value="Quarterly" {% if selected_period == 'Quarterly' %}selected{% endif %}>Quarterly</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="year" class="form-label">Year</label>
+                                        <select class="form-select" id="year" name="year">
+                                            <option value="all">All Years</option>
+                                            {% for year in years %}
+                                            <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Compare</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Comparison Results: {{ selected_metric }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <canvas id="comparisonChart"></canvas>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Company</th>
+                                                <th>Value</th>
+                                                <th>Period</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for result in results %}
+                                            <tr>
+                                                <td>{{ result.ticker }}</td>
+                                                <td>{{ result.metric_value }}</td>
+                                                <td>{{ result.period }} {% if result.year %}{{ result.year }}{% endif %} {% if result.quarter %}{{ result.quarter }}{% endif %}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Comparison Tips</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Effective Comparison Strategies</h6>
+                                <ul>
+                                    <li>Compare similar companies within the same industry</li>
+                                    <li>Look at trends over multiple years rather than single data points</li>
+                                    <li>Consider both absolute values and growth rates</li>
+                                    <li>Compare multiple metrics for a more comprehensive analysis</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Key Metrics to Compare</h6>
+                                <ul>
+                                    <li>Revenue Growth</li>
+                                    <li>Net Income</li>
+                                    <li>Profit Margin</li>
+                                    <li>Return on Assets (ROA)</li>
+                                    <li>Return on Equity (ROE)</li>
+                                    <li>Debt-to-Equity Ratio</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light text-center text-lg-start mt-5">
+        <div class="container p-4">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Financial Knowledge Base for TNET and Competitors</p>
+                </div>
+            </div>
+        </div>
+        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
+            © 2025 Financial Knowledge Base
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    {% if results %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            // Extract unique companies and years
+            const companies = [...new Set({{ results|map(attribute='ticker')|list|tojson }})];
+            const years = [...new Set({{ results|map(attribute='year')|list|tojson }})];
+            
+            // Prepare data for chart
+            const datasets = companies.map(company => {
+                const companyData = {{ results|tojson }}.filter(r => r.ticker === company);
+                return {
+                    label: company,
+                    data: companyData.map(r => r.metric_value),
+                    borderColor: getRandomColor(),
+                    backgroundColor: getRandomColor(0.2),
+                    fill: false
+                };
+            });
+            
+            const labels = years.map(year => `${year}`);
+            
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '{{ selected_metric }} Comparison'
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: '{{ selected_metric }}'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Year'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        
+        function getRandomColor(alpha = 1) {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+    </script>
+    {% endif %}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select All functionality
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const companyCheckboxes = document.querySelectorAll('.company-checkbox');
+            
+            selectAllCheckbox.addEventListener('change', function() {
+                companyCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+            });
+            
+            companyCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const allChecked = Array.from(companyCheckboxes).every(cb => cb.checked);
+                    const anyChecked = Array.from(companyCheckboxes).some(cb => cb.checked);
+                    
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = anyChecked && !allChecked;
+                });
+            });
+            
+            // Check if all are selected initially
+            const allChecked = Array.from(companyCheckboxes).every(cb => cb.checked);
+            const anyChecked = Array.from(companyCheckboxes).some(cb => cb.checked);
+            
+            selectAllCheckbox.checked = allChecked;
+            selectAllCheckbox.indeterminate = anyChecked && !allChecked;
+        });
+    </script>
+</body>
+</html>

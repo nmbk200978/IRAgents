@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search | Financial Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a class="navbar-brand" href="/">
+                <i class='bx bx-line-chart navbar-brand-icon'></i>
+                Market IQ
+            </a>
+            <button id="nav-toggle" class="d-md-none btn btn-primary" aria-expanded="false" aria-label="Toggle navigation">
+                <i class='bx bx-menu'></i>
+            </button>
+            <ul id="nav-menu" class="navbar-nav">
+                <li><a class="nav-link" href="/"><i class='bx bx-home'></i> Home</a></li>
+                <li><a class="nav-link active" href="/search"><i class='bx bx-search'></i> Search</a></li>
+                <li><a class="nav-link" href="/metrics"><i class='bx bx-bar-chart-alt-2'></i> Metrics</a></li>
+                <li><a class="nav-link" href="/compare"><i class='bx bx-git-compare'></i> Compare</a></li>
+                <li><a class="nav-link" href="/insights"><i class='bx bx-bulb'></i> Insights</a></li>
+                <li><a class="nav-link" href="/filings"><i class='bx bx-file'></i> Filings</a></li>
+                <li><a class="nav-link" href="/dashboard"><i class='bx bx-dashboard'></i> Dashboard</a></li>
+            </ul>
+            <button id="dark-mode-toggle" class="btn btn-sm btn-outline-secondary">
+                <i class='bx bx-moon'></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-8">
+        <div class="row mb-6">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Search</li>
+                    </ol>
+                </nav>
+                <h2 class="mb-4">Natural Language Search</h2>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="search-container">
+                    <form id="nlp-search-form" action="/search" method="get">
+                        <i class='bx bx-search search-icon'></i>
+                        <input type="text" id="nlp-search-input" name="query" class="search-input" placeholder="Ask anything about TNET and competitors..." value="{{ query }}" autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </form>
+                </div>
+                <div id="prompt-suggestions" class="prompt-suggestions"></div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-header card-header-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="card-title text-white mb-0">Filters</h4>
+                            <button id="filter-toggle" class="btn btn-sm btn-light d-md-none">Hide Filters</button>
+                        </div>
+                    </div>
+                    <div id="filter-container" class="card-body">
+                        <form action="{{ url_for('search') }}" method="get">
+                            {% if query %}
+                            <input type="hidden" name="query" value="{{ query }}">
+                            {% endif %}
+                            
+                            <div class="mb-3">
+                                <label for="ticker" class="form-label">Company</label>
+                                <select class="form-select" id="ticker" name="ticker">
+                                    <option value="">All Companies</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.ticker }}" {% if selected_ticker == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="doc_type" class="form-label">Document Type</label>
+                                <select class="form-select" id="doc_type" name="doc_type">
+                                    <option value="">All Types</option>
+                                    <option value="10-K" {% if selected_doc_type == '10-K' %}selected{% endif %}>10-K (Annual Report)</option>
+                                    <option value="10-Q" {% if selected_doc_type == '10-Q' %}selected{% endif %}>10-Q (Quarterly Report)</option>
+                                    <option value="8-K" {% if selected_doc_type == '8-K' %}selected{% endif %}>8-K (Current Report)</option>
+                                    <option value="Earnings Call" {% if selected_doc_type == 'Earnings Call' %}selected{% endif %}>Earnings Call Transcript</option>
+                                    <option value="Analyst Report" {% if selected_doc_type == 'Analyst Report' %}selected{% endif %}>Analyst Report</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="date_range" class="form-label">Date Range</label>
+                                <select class="form-select" id="date_range" name="date_range">
+                                    <option value="">All Time</option>
+                                    <option value="1y" {% if date_range == '1y' %}selected{% endif %}>Past Year</option>
+                                    <option value="2y" {% if date_range == '2y' %}selected{% endif %}>Past 2 Years</option>
+                                    <option value="5y" {% if date_range == '5y' %}selected{% endif %}>Past 5 Years</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="sort_by" class="form-label">Sort By</label>
+                                <select class="form-select" id="sort_by" name="sort_by">
+                                    <option value="relevance" {% if sort_by == 'relevance' %}selected{% endif %}>Relevance</option>
+                                    <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Date (Newest First)</option>
+                                    <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Date (Oldest First)</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Search History</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="search-history" class="list-group">
+                            <!-- Search history will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                {% if query %}
+                <div class="card mb-4">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Search Results</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class='bx bx-info-circle'></i> 
+                            Showing results for: <strong>{{ query }}</strong>
+                            {% if selected_ticker %} in <strong>{{ selected_ticker }}</strong>{% endif %}
+                            {% if selected_doc_type %} | Document type: <strong>{{ selected_doc_type }}</strong>{% endif %}
+                        </div>
+                        
+                        {% if nlp_answer %}
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title">AI-Generated Answer</h5>
+                                <div class="nlp-answer">
+                                    {{ nlp_answer|safe }}
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class='bx bx-info-circle'></i> 
+                                        This answer was generated based on the documents in the knowledge base.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if results %}
+                        <div class="search-results">
+                            {% for result in results %}
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="badge bg-primary mb-2">{{ result.ticker }}</span>
+                                        <span class="badge bg-secondary mb-2">{{ result.doc_type }}</span>
+                                    </div>
+                                    <h5 class="card-title">{{ result.title }}</h5>
+                                    <p class="card-text">{{ result.snippet|safe }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">{{ result.filing_date }}</small>
+                                        <a href="{{ url_for('document_detail', doc_id=result.id) }}" class="btn btn-sm btn-outline-primary">View Document</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <nav aria-label="Search results pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('search', query=query, ticker=selected_ticker, doc_type=selected_doc_type, date_range=date_range, sort_by=sort_by, page=page-1) }}">Previous</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Previous</span>
+                                </li>
+                                {% endif %}
+                                
+                                {% for p in range(1, total_pages + 1) %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('search', query=query, ticker=selected_ticker, doc_type=selected_doc_type, date_range=date_range, sort_by=sort_by, page=p) }}">{{ p }}</a>
+                                </li>
+                                {% endfor %}
+                                
+                                {% if page < total_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('search', query=query, ticker=selected_ticker, doc_type=selected_doc_type, date_range=date_range, sort_by=sort_by, page=page+1) }}">Next</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class='bx bx-error'></i> No results found for your query. Try broadening your search terms or removing filters.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="card mb-4">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Natural Language Search</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center py-5">
+                            <i class='bx bx-search' style="font-size: 4rem; color: var(--gray-300);"></i>
+                            <h3 class="mt-4">Ask anything about TNET and its competitors</h3>
+                            <p class="text-muted">Use natural language to search through SEC filings, earnings calls, and financial metrics.</p>
+                            <div class="mt-4">
+                                <h5>Example queries:</h5>
+                                <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                                    <a href="{{ url_for('search', query='What is TNET\'s revenue growth compared to competitors?') }}" class="btn btn-outline-primary">TNET's revenue growth vs competitors</a>
+                                    <a href="{{ url_for('search', query='Key risks mentioned in TNET\'s latest 10-K') }}" class="btn btn-outline-primary">Key risks in TNET's latest 10-K</a>
+                                    <a href="{{ url_for('search', query='Compare profit margins of all PEO companies') }}" class="btn btn-outline-primary">Compare profit margins</a>
+                                    <a href="{{ url_for('search', query='Latest earnings call highlights for TNET') }}" class="btn btn-outline-primary">Latest earnings call highlights</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Recent Documents</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Company</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Title</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for doc in recent_documents %}
+                                    <tr>
+                                        <td>{{ doc.ticker }}</td>
+                                        <td>{{ doc.doc_type }}</td>
+                                        <td>{{ doc.filing_date }}</td>
+                                        <td>{{ doc.title|truncate(50) }}</td>
+                                        <td>
+                                            <a href="{{ url_for('document_detail', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-text">
+                    <p>&copy; 2025 Financial Knowledge Base | TNET & Competitors</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                        <i class='bx bx-up-arrow-alt'></i> Back to top
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/modern/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate search history from localStorage
+            const searchHistory = document.getElementById('search-history');
+            const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+            
+            if (history.length > 0) {
+                searchHistory.innerHTML = '';
+                history.forEach(query => {
+                    const item = document.createElement('a');
+                    item.href = `/search?query=${encodeURIComponent(query)}`;
+                    item.classList.add('list-group-item', 'list-group-item-action');
+                    item.textContent = query;
+                    searchHistory.appendChild(item);
+                });
+            } else {
+                searchHistory.innerHTML = '<div class="text-muted text-center py-3">No search history</div>';
+            }
+        });
+    </script>
+</body>
+</html>

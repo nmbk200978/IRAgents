@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEC Filings | Financial Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a class="navbar-brand" href="/">
+                <i class='bx bx-line-chart navbar-brand-icon'></i>
+                Market IQ
+            </a>
+            <button id="nav-toggle" class="d-md-none btn btn-primary" aria-expanded="false" aria-label="Toggle navigation">
+                <i class='bx bx-menu'></i>
+            </button>
+            <ul id="nav-menu" class="navbar-nav">
+                <li><a class="nav-link" href="/"><i class='bx bx-home'></i> Home</a></li>
+                <li><a class="nav-link" href="/search"><i class='bx bx-search'></i> Search</a></li>
+                <li><a class="nav-link" href="/metrics"><i class='bx bx-bar-chart-alt-2'></i> Metrics</a></li>
+                <li><a class="nav-link" href="/compare"><i class='bx bx-git-compare'></i> Compare</a></li>
+                <li><a class="nav-link" href="/insights"><i class='bx bx-bulb'></i> Insights</a></li>
+                <li><a class="nav-link active" href="/filings"><i class='bx bx-file'></i> Filings</a></li>
+                <li><a class="nav-link" href="/dashboard"><i class='bx bx-dashboard'></i> Dashboard</a></li>
+            </ul>
+            <button id="dark-mode-toggle" class="btn btn-sm btn-outline-secondary">
+                <i class='bx bx-moon'></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-8">
+        <div class="row">
+            <div class="col-12">
+                <div class="search-container">
+                    <form id="nlp-search-form" action="/search" method="get">
+                        <i class='bx bx-search search-icon'></i>
+                        <input type="text" id="nlp-search-input" name="query" class="search-input" placeholder="Ask anything about TNET and competitors..." autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </form>
+                </div>
+                <div id="prompt-suggestions" class="prompt-suggestions"></div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">SEC Filings</li>
+                    </ol>
+                </nav>
+                <h2 class="mb-4">SEC Filings</h2>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-header card-header-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="card-title text-white mb-0">Filters</h4>
+                            <button id="filter-toggle" class="btn btn-sm btn-light d-md-none">Hide Filters</button>
+                        </div>
+                    </div>
+                    <div id="filter-container" class="card-body">
+                        <form action="{{ url_for('filings') }}" method="get">
+                            <div class="mb-3">
+                                <label for="ticker" class="form-label">Company</label>
+                                <select class="form-select" id="ticker" name="ticker">
+                                    <option value="">All Companies</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.ticker }}" {% if selected_ticker == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="filing_type" class="form-label">Filing Type</label>
+                                <select class="form-select" id="filing_type" name="filing_type">
+                                    <option value="">All Types</option>
+                                    <option value="10-K" {% if selected_filing_type == '10-K' %}selected{% endif %}>10-K (Annual Report)</option>
+                                    <option value="10-Q" {% if selected_filing_type == '10-Q' %}selected{% endif %}>10-Q (Quarterly Report)</option>
+                                    <option value="8-K" {% if selected_filing_type == '8-K' %}selected{% endif %}>8-K (Current Report)</option>
+                                    <option value="DEF 14A" {% if selected_filing_type == 'DEF 14A' %}selected{% endif %}>DEF 14A (Proxy Statement)</option>
+                                    <option value="S-1" {% if selected_filing_type == 'S-1' %}selected{% endif %}>S-1 (Registration Statement)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="year" class="form-label">Year</label>
+                                <select class="form-select" id="year" name="year">
+                                    <option value="">All Years</option>
+                                    {% for year in years %}
+                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="quarter" class="form-label">Quarter</label>
+                                <select class="form-select" id="quarter" name="quarter">
+                                    <option value="">All Quarters</option>
+                                    <option value="Q1" {% if selected_quarter == 'Q1' %}selected{% endif %}>Q1</option>
+                                    <option value="Q2" {% if selected_quarter == 'Q2' %}selected{% endif %}>Q2</option>
+                                    <option value="Q3" {% if selected_quarter == 'Q3' %}selected{% endif %}>Q3</option>
+                                    <option value="Q4" {% if selected_quarter == 'Q4' %}selected{% endif %}>Q4</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="sort_by" class="form-label">Sort By</label>
+                                <select class="form-select" id="sort_by" name="sort_by">
+                                    <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Date (Newest First)</option>
+                                    <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Date (Oldest First)</option>
+                                    <option value="company" {% if sort_by == 'company' %}selected{% endif %}>Company</option>
+                                    <option value="type" {% if sort_by == 'type' %}selected{% endif %}>Filing Type</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Filing Types</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            <a href="{{ url_for('filings', filing_type='10-K') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                10-K (Annual Report)
+                                <span class="badge bg-primary rounded-pill">{{ filing_counts['10-K'] }}</span>
+                            </a>
+                            <a href="{{ url_for('filings', filing_type='10-Q') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                10-Q (Quarterly Report)
+                                <span class="badge bg-primary rounded-pill">{{ filing_counts['10-Q'] }}</span>
+                            </a>
+                            <a href="{{ url_for('filings', filing_type='8-K') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                8-K (Current Report)
+                                <span class="badge bg-primary rounded-pill">{{ filing_counts['8-K'] }}</span>
+                            </a>
+                            <a href="{{ url_for('filings', filing_type='DEF 14A') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                DEF 14A (Proxy Statement)
+                                <span class="badge bg-primary rounded-pill">{{ filing_counts['DEF 14A'] }}</span>
+                            </a>
+                            <a href="{{ url_for('filings', filing_type='S-1') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                S-1 (Registration Statement)
+                                <span class="badge bg-primary rounded-pill">{{ filing_counts['S-1'] }}</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                <div class="card mb-4">
+                    <div class="card-header card-header-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4 class="card-title text-white mb-0">SEC Filings</h4>
+                            <span class="badge bg-light text-dark">{{ filings|length }} results</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if filings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Company</th>
+                                        <th>Filing Type</th>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for filing in filings %}
+                                    <tr>
+                                        <td>{{ filing.ticker }}</td>
+                                        <td>{{ filing.filing_type }}</td>
+                                        <td>{{ filing.filing_date }}</td>
+                                        <td>{{ filing.description|truncate(50) }}</td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('document_detail', doc_id=filing.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                                <a href="{{ filing.edgar_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">EDGAR</a>
+                                                <button class="btn btn-sm btn-outline-info" onclick="showInsights('{{ filing.id }}')">Insights</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <nav aria-label="Filings pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if page > 1 %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('filings', ticker=selected_ticker, filing_type=selected_filing_type, year=selected_year, quarter=selected_quarter, sort_by=sort_by, page=page-1) }}">Previous</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Previous</span>
+                                </li>
+                                {% endif %}
+                                
+                                {% for p in range(1, total_pages + 1) %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('filings', ticker=selected_ticker, filing_type=selected_filing_type, year=selected_year, quarter=selected_quarter, sort_by=sort_by, page=p) }}">{{ p }}</a>
+                                </li>
+                                {% endfor %}
+                                
+                                {% if page < total_pages %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('filings', ticker=selected_ticker, filing_type=selected_filing_type, year=selected_year, quarter=selected_quarter, sort_by=sort_by, page=page+1) }}">Next</a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class='bx bx-info-circle'></i> No filings found matching your criteria. Try adjusting your filters.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Filing Calendar</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5>Upcoming Filings</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Company</th>
+                                                <th>Filing Type</th>
+                                                <th>Expected Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for filing in upcoming_filings %}
+                                            <tr>
+                                                <td>{{ filing.ticker }}</td>
+                                                <td>{{ filing.filing_type }}</td>
+                                                <td>{{ filing.expected_date }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Recent Filings</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Company</th>
+                                                <th>Filing Type</th>
+                                                <th>Filing Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for filing in recent_filings %}
+                                            <tr>
+                                                <td>{{ filing.ticker }}</td>
+                                                <td>{{ filing.filing_type }}</td>
+                                                <td>{{ filing.filing_date }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <canvas id="filings-calendar-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights Modal -->
+    <div class="modal fade" id="insightsModal" tabindex="-1" aria-labelledby="insightsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="insightsModalLabel">Document Insights</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="insightsModalBody">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading insights...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="#" id="viewDocumentBtn" class="btn btn-primary">View Full Document</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-text">
+                    <p>&copy; 2025 Financial Knowledge Base | TNET & Competitors</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                        <i class='bx bx-up-arrow-alt'></i> Back to top
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/modern/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize filings calendar chart
+            const calendarCtx = document.getElementById('filings-calendar-chart').getContext('2d');
+            new Chart(calendarCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: '10-K Filings',
+                            data: [2, 5, 8, 3, 1, 0, 0, 0, 0, 0, 1, 4],
+                            backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '10-Q Filings',
+                            data: [0, 0, 3, 6, 9, 2, 0, 0, 4, 8, 6, 0],
+                            backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                            borderColor: 'rgb(245, 158, 11)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Filing Distribution by Month'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Filings'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Function to show insights modal
+        function showInsights(docId) {
+            const modal = new bootstrap.Modal(document.getElementById('insightsModal'));
+            const modalBody = document.getElementById('insightsModalBody');
+            const viewDocumentBtn = document.getElementById('viewDocumentBtn');
+            
+            // Set the view document link
+            viewDocumentBtn.href = `/document/${docId}`;
+            
+            // Show the modal
+            modal.show();
+            
+            // In a real implementation, this would fetch insights from the server
+            // For now, we'll simulate with a timeout
+            setTimeout(() => {
+                modalBody.innerHTML = `
+                    <div class="insights-container">
+                        <h5>Key Insights</h5>
+                        <ul class="list-group mb-4">
+                            <li class="list-group-item">
+                                <i class='bx bx-check-circle text-success'></i>
+                                Revenue increased by 9.2% year-over-year, exceeding analyst expectations.
+                            </li>
+                            <li class="list-group-item">
+                                <i class='bx bx-check-circle text-success'></i>
+                                Gross margin improved to 32.7%, up from 31.5% in the previous year.
+                            </li>
+                            <li class="list-group-item">
+                                <i class='bx bx-check-circle text-success'></i>
+                                The company announced a new strategic partnership with a major technology provider.
+                            </li>
+                            <li class="list-group-item">
+                                <i class='bx bx-error-circle text-danger'></i>
+                                Management identified increased competition as a key risk factor.
+                            </li>
+                            <li class="list-group-item">
+                                <i class='bx bx-info-circle text-info'></i>
+                                The company plans to expand into new markets in the coming fiscal year.
+                            </li>
+                        </ul>
+                        
+                        <h5>Management Commentary</h5>
+                        <blockquote class="blockquote">
+                            <p>"We are pleased with our strong performance this quarter, which reflects the success of our strategic initiatives and the dedication of our team members."</p>
+                            <footer class="blockquote-footer">CEO, Earnings Call</footer>
+                        </blockquote>
+                    </div>
+                `;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

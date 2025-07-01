@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metrics | Market IQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a class="navbar-brand" href="/">
+                <i class='bx bx-line-chart navbar-brand-icon'></i>
+                Market IQ
+            </a>
+            <button id="nav-toggle" class="d-md-none btn btn-primary" aria-expanded="false" aria-label="Toggle navigation">
+                <i class='bx bx-menu'></i>
+            </button>
+            <ul id="nav-menu" class="navbar-nav">
+                <li><a class="nav-link" href="/"><i class='bx bx-home'></i> Home</a></li>
+                <li><a class="nav-link" href="/search"><i class='bx bx-search'></i> Search</a></li>
+                <li><a class="nav-link active" href="/metrics"><i class='bx bx-bar-chart-alt-2'></i> Metrics</a></li>
+                <li><a class="nav-link" href="/compare"><i class='bx bx-git-compare'></i> Compare</a></li>
+                <li><a class="nav-link" href="/insights"><i class='bx bx-bulb'></i> Insights</a></li>
+                <li><a class="nav-link" href="/filings"><i class='bx bx-file'></i> Filings</a></li>
+                <li><a class="nav-link" href="/dashboard"><i class='bx bx-dashboard'></i> Dashboard</a></li>
+            </ul>
+            <button id="dark-mode-toggle" class="btn btn-sm btn-outline-secondary">
+                <i class='bx bx-moon'></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-8">
+        <div class="row">
+            <div class="col-12">
+                <div class="search-container">
+                    <form id="nlp-search-form" action="/search" method="get">
+                        <i class='bx bx-search search-icon'></i>
+                        <input type="text" id="nlp-search-input" name="query" class="search-input" placeholder="Ask anything about TNET and competitors..." autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </form>
+                </div>
+                <div id="prompt-suggestions" class="prompt-suggestions"></div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Financial Metrics</li>
+                    </ol>
+                </nav>
+                <h2 class="mb-4">Financial Metrics</h2>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Metrics Explorer</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('metrics') }}" method="get" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="ticker" class="form-label">Select Company</label>
+                                <select class="form-select" id="ticker" name="ticker">
+                                    <option value="">All Companies</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.ticker }}" {% if selected_ticker == company.ticker %}selected{% endif %}>
+                                        {{ company.ticker }} - {{ company.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="metric_type" class="form-label">Metric Type</label>
+                                <select class="form-select" id="metric_type" name="metric_type">
+                                    <option value="all">All Metrics</option>
+                                    <option value="growth">Growth</option>
+                                    <option value="profitability">Profitability</option>
+                                    <option value="efficiency">Efficiency</option>
+                                    <option value="valuation">Valuation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="period" class="form-label">Time Period</label>
+                                <select class="form-select" id="period" name="period">
+                                    <option value="annual">Annual</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="ttm">Trailing Twelve Months</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                <button type="reset" class="btn btn-outline-secondary">Reset</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="card-title text-white mb-0">Performance Metrics</h3>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-light" data-chart-type="bar">Bar</button>
+                                <button type="button" class="btn btn-sm btn-light active" data-chart-type="line">Line</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="metrics-chart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Key Metrics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="metrics-list">
+                            {% if selected_ticker %}
+                                {% for metric in metrics %}
+                                <div class="metric-item">
+                                    <div class="metric-name">{{ metric.name }}</div>
+                                    <div class="metric-value">{{ metric.values[0].value }}</div>
+                                    <div class="metric-trend">
+                                        {% if metric.trend > 0 %}
+                                        <span class="text-success"><i class='bx bx-up-arrow-alt'></i> {{ metric.trend }}%</span>
+                                        {% elif metric.trend < 0 %}
+                                        <span class="text-danger"><i class='bx bx-down-arrow-alt'></i> {{ metric.trend }}%</span>
+                                        {% else %}
+                                        <span class="text-muted"><i class='bx bx-minus'></i> 0%</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="alert alert-info">
+                                    Select a company to view detailed metrics
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Metrics Comparison</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>TNET</th>
+                                        <th>ADP</th>
+                                        <th>PAYX</th>
+                                        <th>NSP</th>
+                                        <th>PYCR</th>
+                                        <th>PCTY</th>
+                                        <th>Industry Avg</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Revenue Growth</td>
+                                        <td>9.2%</td>
+                                        <td>6.2%</td>
+                                        <td>7.8%</td>
+                                        <td>8.1%</td>
+                                        <td>12.3%</td>
+                                        <td>10.5%</td>
+                                        <td>9.0%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Gross Margin</td>
+                                        <td>32.7%</td>
+                                        <td>45.0%</td>
+                                        <td>41.2%</td>
+                                        <td>30.5%</td>
+                                        <td>28.4%</td>
+                                        <td>31.8%</td>
+                                        <td>34.9%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Operating Margin</td>
+                                        <td>11.2%</td>
+                                        <td>22.5%</td>
+                                        <td>19.8%</td>
+                                        <td>10.8%</td>
+                                        <td>8.7%</td>
+                                        <td>9.5%</td>
+                                        <td>13.8%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Net Margin</td>
+                                        <td>8.1%</td>
+                                        <td>17.3%</td>
+                                        <td>15.2%</td>
+                                        <td>7.9%</td>
+                                        <td>5.3%</td>
+                                        <td>6.8%</td>
+                                        <td>10.1%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ROE</td>
+                                        <td>18.5%</td>
+                                        <td>42.1%</td>
+                                        <td>38.7%</td>
+                                        <td>21.3%</td>
+                                        <td>15.8%</td>
+                                        <td>17.2%</td>
+                                        <td>25.6%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>P/E Ratio</td>
+                                        <td>24.3</td>
+                                        <td>28.7</td>
+                                        <td>26.5</td>
+                                        <td>22.1</td>
+                                        <td>32.4</td>
+                                        <td>30.8</td>
+                                        <td>27.5</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Metrics Explained</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="metricsAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                        Growth Metrics
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#metricsAccordion">
+                                    <div class="accordion-body">
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><strong>Revenue Growth:</strong> Year-over-year percentage increase in revenue</li>
+                                            <li class="mb-2"><strong>Client Growth:</strong> Year-over-year percentage increase in client count</li>
+                                            <li class="mb-2"><strong>Employee Growth:</strong> Year-over-year percentage increase in employee count</li>
+                                            <li class="mb-2"><strong>Market Share Growth:</strong> Year-over-year percentage increase in market share</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                        Profitability Metrics
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
+                                    <div class="accordion-body">
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><strong>Gross Margin:</strong> Gross profit as a percentage of revenue</li>
+                                            <li class="mb-2"><strong>Operating Margin:</strong> Operating income as a percentage of revenue</li>
+                                            <li class="mb-2"><strong>Net Margin:</strong> Net income as a percentage of revenue</li>
+                                            <li class="mb-2"><strong>EBITDA Margin:</strong> EBITDA as a percentage of revenue</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                        Efficiency Metrics
+                                    </button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#metricsAccordion">
+                                    <div class="accordion-body">
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><strong>ROE:</strong> Return on Equity - Net income divided by shareholder equity</li>
+                                            <li class="mb-2"><strong>ROA:</strong> Return on Assets - Net income divided by total assets</li>
+                                            <li class="mb-2"><strong>ROIC:</strong> Return on Invested Capital - Net operating profit after tax divided by invested capital</li>
+                                            <li class="mb-2"><strong>Asset Turnover:</strong> Revenue divided by average total assets</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Industry Benchmarks</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="benchmark-chart" height="300"></canvas>
+                        </div>
+                        <div class="mt-4">
+                            <h5>Key Insights</h5>
+                            <ul>
+                                <li>PEO industry average gross margin is 34.9%</li>
+                                <li>Top performers exceed 40% gross margin</li>
+                                <li>Client retention rates average 92% industry-wide</li>
+                                <li>Revenue per worksite employee ranges from $1,450 to $2,200 monthly</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-text">
+                    <p>&copy; 2025 Market IQ | TNET & Competitors</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                        <i class='bx bx-up-arrow-alt'></i> Back to top
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/modern/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize metrics chart
+            const metricsCtx = document.getElementById('metrics-chart').getContext('2d');
+            new Chart(metricsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['2020', '2021', '2022', '2023', '2024', '2025'],
+                    datasets: [{
+                        label: 'Revenue Growth',
+                        data: [5.2, 6.8, 7.5, 8.3, 9.2, 10.1],
+                        borderColor: 'rgba(37, 99, 235, 0.8)',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Gross Margin',
+                        data: [28.5, 29.7, 30.8, 31.5, 32.7, 33.2],
+                        borderColor: 'rgba(245, 158, 11, 0.8)',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                drawBorder: false,
+                                color: 'rgba(200, 200, 200, 0.15)',
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Initialize benchmark chart
+            const benchmarkCtx = document.getElementById('benchmark-chart').getContext('2d');
+            new Chart(benchmarkCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['Revenue Growth', 'Gross Margin', 'Operating Margin', 'Net Margin', 'ROE', 'Client Retention'],
+                    datasets: [{
+                        label: 'TNET',
+                        data: [9.2, 32.7, 11.2, 8.1, 18.5, 91],
+                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                        borderColor: 'rgba(245, 158, 11, 0.8)',
+                        pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(245, 158, 11, 1)'
+                    }, {
+                        label: 'Industry Average',
+                        data: [9.0, 34.9, 13.8, 10.1, 25.6, 92],
+                        backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                        borderColor: 'rgba(37, 99, 235, 0.8)',
+                        pointBackgroundColor: 'rgba(37, 99, 235, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(37, 99, 235, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 2
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                display: true,
+                                color: 'rgba(200, 200, 200, 0.15)',
+                            },
+                            grid: {
+                                color: 'rgba(200, 200, 200, 0.15)',
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

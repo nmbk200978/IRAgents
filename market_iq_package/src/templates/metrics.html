@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial KB - Metrics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Financial Knowledge Base</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/search">Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/metrics">Metrics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/compare">Compare</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/insights">Insights</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/filings">Filings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Financial Metrics</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="card-title mb-0">Financial Metrics</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('metrics') }}" method="get">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="ticker" class="form-label">Select Company</label>
+                                        <select class="form-select" id="ticker" name="ticker" required>
+                                            <option value="">Choose a company</option>
+                                            {% for company in companies %}
+                                            <option value="{{ company.ticker }}">{{ company.ticker }} - {{ company.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="metric" class="form-label">Metric</label>
+                                        <select class="form-select" id="metric" name="metric">
+                                            <option value="">All Metrics</option>
+                                            {% for metric in metrics %}
+                                            <option value="{{ metric }}">{{ metric }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="year" class="form-label">Year</label>
+                                        <select class="form-select" id="year" name="year">
+                                            <option value="">All Years</option>
+                                            {% for year in years %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">View Metrics</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Key Financial Metrics Explained</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Revenue Metrics</h6>
+                                <ul>
+                                    <li><strong>Total Revenue:</strong> The total amount of money generated from sales of products or services</li>
+                                    <li><strong>Revenue Growth:</strong> Year-over-year percentage increase in revenue</li>
+                                    <li><strong>Revenue per Employee:</strong> Total revenue divided by number of employees</li>
+                                </ul>
+                                
+                                <h6>Profitability Metrics</h6>
+                                <ul>
+                                    <li><strong>Gross Profit:</strong> Revenue minus cost of goods sold</li>
+                                    <li><strong>Operating Income:</strong> Profit from core business operations</li>
+                                    <li><strong>Net Income:</strong> Total profit after all expenses and taxes</li>
+                                    <li><strong>EBITDA:</strong> Earnings Before Interest, Taxes, Depreciation, and Amortization</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Margin Metrics</h6>
+                                <ul>
+                                    <li><strong>Gross Margin:</strong> Gross profit as a percentage of revenue</li>
+                                    <li><strong>Operating Margin:</strong> Operating income as a percentage of revenue</li>
+                                    <li><strong>Net Profit Margin:</strong> Net income as a percentage of revenue</li>
+                                </ul>
+                                
+                                <h6>Return Metrics</h6>
+                                <ul>
+                                    <li><strong>Return on Assets (ROA):</strong> Net income divided by total assets</li>
+                                    <li><strong>Return on Equity (ROE):</strong> Net income divided by shareholder equity</li>
+                                    <li><strong>Return on Invested Capital (ROIC):</strong> Net operating profit after tax divided by invested capital</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Industry Benchmarks</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6>PEO Industry Average Metrics (2024)</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th>Industry Average</th>
+                                                <th>Top Performer</th>
+                                                <th>Bottom Performer</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Revenue Growth</td>
+                                                <td>8.5%</td>
+                                                <td>12.3%</td>
+                                                <td>3.2%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Gross Margin</td>
+                                                <td>32.7%</td>
+                                                <td>38.5%</td>
+                                                <td>26.1%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Operating Margin</td>
+                                                <td>11.4%</td>
+                                                <td>15.8%</td>
+                                                <td>7.2%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Net Profit Margin</td>
+                                                <td>8.2%</td>
+                                                <td>12.1%</td>
+                                                <td>5.3%</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Return on Equity</td>
+                                                <td>18.6%</td>
+                                                <td>24.3%</td>
+                                                <td>12.7%</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="text-muted mt-2">Source: Industry analysis based on public company filings</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light text-center text-lg-start mt-5">
+        <div class="container p-4">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Financial Knowledge Base for TNET and Competitors</p>
+                </div>
+            </div>
+        </div>
+        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
+            © 2025 Financial Knowledge Base
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

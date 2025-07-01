@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insights | Financial Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a class="navbar-brand" href="/">
+                <i class='bx bx-line-chart navbar-brand-icon'></i>
+                Market IQ
+            </a>
+            <button id="nav-toggle" class="d-md-none btn btn-primary" aria-expanded="false" aria-label="Toggle navigation">
+                <i class='bx bx-menu'></i>
+            </button>
+            <ul id="nav-menu" class="navbar-nav">
+                <li><a class="nav-link" href="/"><i class='bx bx-home'></i> Home</a></li>
+                <li><a class="nav-link" href="/search"><i class='bx bx-search'></i> Search</a></li>
+                <li><a class="nav-link" href="/metrics"><i class='bx bx-bar-chart-alt-2'></i> Metrics</a></li>
+                <li><a class="nav-link" href="/compare"><i class='bx bx-git-compare'></i> Compare</a></li>
+                <li><a class="nav-link active" href="/insights"><i class='bx bx-bulb'></i> Insights</a></li>
+                <li><a class="nav-link" href="/filings"><i class='bx bx-file'></i> Filings</a></li>
+                <li><a class="nav-link" href="/dashboard"><i class='bx bx-dashboard'></i> Dashboard</a></li>
+            </ul>
+            <button id="dark-mode-toggle" class="btn btn-sm btn-outline-secondary">
+                <i class='bx bx-moon'></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-8">
+        <div class="row">
+            <div class="col-12">
+                <div class="search-container">
+                    <form id="nlp-search-form" action="/search" method="get">
+                        <i class='bx bx-search search-icon'></i>
+                        <input type="text" id="nlp-search-input" name="query" class="search-input" placeholder="Ask anything about TNET and competitors..." autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </form>
+                </div>
+                <div id="prompt-suggestions" class="prompt-suggestions"></div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Insights</li>
+                    </ol>
+                </nav>
+                <h2 class="mb-4">Company Insights</h2>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Explore Insights</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('insights') }}" method="get" class="mb-4">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="ticker" class="form-label">Select Company</label>
+                                    <select class="form-select" id="ticker" name="ticker" required>
+                                        <option value="">Choose a company</option>
+                                        {% for company in companies %}
+                                        <option value="{{ company.ticker }}" {% if selected_ticker == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="type" class="form-label">Insight Type</label>
+                                    <select class="form-select" id="type" name="type">
+                                        <option value="">All Types</option>
+                                        {% for type in insight_types %}
+                                        <option value="{{ type }}" {% if selected_type == type %}selected{% endif %}>{{ type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="period" class="form-label">Time Period</label>
+                                    <select class="form-select" id="period" name="period">
+                                        <option value="">All Time</option>
+                                        <option value="recent" {% if period == 'recent' %}selected{% endif %}>Most Recent</option>
+                                        <option value="1y" {% if period == '1y' %}selected{% endif %}>Past Year</option>
+                                        <option value="2y" {% if period == '2y' %}selected{% endif %}>Past 2 Years</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary">View Insights</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if selected_ticker %}
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="card-title text-white mb-0">
+                                Insights for {{ selected_ticker }}
+                                {% if selected_type %} - {{ selected_type }}{% endif %}
+                            </h3>
+                            <span class="badge bg-light text-dark">{{ insights|length }} results</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if insights %}
+                        <div class="accordion" id="insightsAccordion">
+                            {% for insight in insights %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ loop.index }}">
+                                    <button class="accordion-button {% if loop.index != 1 %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}">
+                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                            <span>{{ insight.insight_type }}</span>
+                                            <span class="badge bg-primary ms-2">{{ insight.date }}</span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.index == 1 %}show{% endif %}" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#insightsAccordion">
+                                    <div class="accordion-body">
+                                        <div class="insight-content">
+                                            {{ insight.insight_text|safe }}
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <span class="text-muted">Source: {{ insight.source }}</span>
+                                            {% if insight.doc_id %}
+                                            <a href="{{ url_for('document_detail', doc_id=insight.doc_id) }}" class="btn btn-sm btn-outline-primary">View Source Document</a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class='bx bx-info-circle'></i> No insights available for {{ selected_ticker }}{% if selected_type %} with type "{{ selected_type }}"{% endif %}.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Key Metrics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-4">
+                                <div class="dashboard-stat">
+                                    <div class="dashboard-stat-value">{{ company_metrics[selected_ticker].revenue }}</div>
+                                    <div class="dashboard-stat-label">Revenue</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-4">
+                                <div class="dashboard-stat">
+                                    <div class="dashboard-stat-value">{{ company_metrics[selected_ticker].growth }}</div>
+                                    <div class="dashboard-stat-label">YoY Growth</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-4">
+                                <div class="dashboard-stat">
+                                    <div class="dashboard-stat-value">{{ company_metrics[selected_ticker].margin }}</div>
+                                    <div class="dashboard-stat-label">Net Margin</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-4">
+                                <div class="dashboard-stat">
+                                    <div class="dashboard-stat-value">{{ company_metrics[selected_ticker].roe }}</div>
+                                    <div class="dashboard-stat-label">ROE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Recent Filings</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for filing in company_filings[selected_ticker][:5] %}
+                            <a href="{{ filing.url }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ filing.doc_type }}</h5>
+                                    <small>{{ filing.filing_date }}</small>
+                                </div>
+                                <p class="mb-1">{{ filing.title|truncate(50) }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('filings', ticker=selected_ticker) }}" class="btn btn-outline-primary">View All Filings</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Understanding Insights</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Types of Insights</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Financial Performance</td>
+                                                <td>Analysis of revenue, profit margins, growth rates, and other financial metrics</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Strategic Initiatives</td>
+                                                <td>Information about company strategies, acquisitions, partnerships, and market expansion</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Market Position</td>
+                                                <td>Analysis of competitive landscape, market share, and industry trends</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Risk Factors</td>
+                                                <td>Identified risks that could impact company performance or stock price</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Management Commentary</td>
+                                                <td>Key statements from executives during earnings calls or investor presentations</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Insight Sources</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Source</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>10-K Reports</td>
+                                                <td>Annual reports filed with the SEC containing comprehensive financial information</td>
+                                            </tr>
+                                            <tr>
+                                                <td>10-Q Reports</td>
+                                                <td>Quarterly reports filed with the SEC containing interim financial information</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Earnings Calls</td>
+                                                <td>Transcripts of quarterly earnings conference calls with analysts and investors</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Analyst Reports</td>
+                                                <td>Research and analysis from financial analysts covering the company</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Press Releases</td>
+                                                <td>Official company announcements about financial results and corporate developments</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-text">
+                    <p>&copy; 2025 Financial Knowledge Base | TNET & Competitors</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                        <i class='bx bx-up-arrow-alt'></i> Back to top
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/modern/main.js') }}"></script>
+</body>
+</html>

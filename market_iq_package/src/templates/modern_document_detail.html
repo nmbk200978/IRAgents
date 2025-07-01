@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Detail | Financial Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a class="navbar-brand" href="/">
+                <i class='bx bx-line-chart navbar-brand-icon'></i>
+                Market IQ
+            </a>
+            <button id="nav-toggle" class="d-md-none btn btn-primary" aria-expanded="false" aria-label="Toggle navigation">
+                <i class='bx bx-menu'></i>
+            </button>
+            <ul id="nav-menu" class="navbar-nav">
+                <li><a class="nav-link" href="/"><i class='bx bx-home'></i> Home</a></li>
+                <li><a class="nav-link" href="/search"><i class='bx bx-search'></i> Search</a></li>
+                <li><a class="nav-link" href="/metrics"><i class='bx bx-bar-chart-alt-2'></i> Metrics</a></li>
+                <li><a class="nav-link" href="/compare"><i class='bx bx-git-compare'></i> Compare</a></li>
+                <li><a class="nav-link" href="/insights"><i class='bx bx-bulb'></i> Insights</a></li>
+                <li><a class="nav-link" href="/filings"><i class='bx bx-file'></i> Filings</a></li>
+                <li><a class="nav-link" href="/dashboard"><i class='bx bx-dashboard'></i> Dashboard</a></li>
+            </ul>
+            <button id="dark-mode-toggle" class="btn btn-sm btn-outline-secondary">
+                <i class='bx bx-moon'></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-8">
+        <div class="row">
+            <div class="col-12">
+                <div class="search-container">
+                    <form id="nlp-search-form" action="/search" method="get">
+                        <i class='bx bx-search search-icon'></i>
+                        <input type="text" id="nlp-search-input" name="query" class="search-input" placeholder="Ask anything about TNET and competitors..." autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </form>
+                </div>
+                <div id="prompt-suggestions" class="prompt-suggestions"></div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item"><a href="/filings">Filings</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ document.ticker }} - {{ document.doc_type }}</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="card-title text-white mb-0">{{ document.title }}</h3>
+                            <span class="badge bg-light text-dark">{{ document.filing_date }}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="document-meta mb-4">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tbody>
+                                            <tr>
+                                                <th>Company:</th>
+                                                <td>{{ document.ticker }} - {{ document.company_name }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Document Type:</th>
+                                                <td>{{ document.doc_type }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Filing Date:</th>
+                                                <td>{{ document.filing_date }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm">
+                                        <tbody>
+                                            <tr>
+                                                <th>Period:</th>
+                                                <td>{{ document.period }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>Source:</th>
+                                                <td>{{ document.source }}</td>
+                                            </tr>
+                                            <tr>
+                                                <th>External Link:</th>
+                                                <td>
+                                                    {% if document.edgar_url %}
+                                                    <a href="{{ document.edgar_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class='bx bx-link-external'></i> View on EDGAR
+                                                    </a>
+                                                    {% else %}
+                                                    Not available
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="document-actions mb-4">
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary" onclick="toggleHighlights()">
+                                    <i class='bx bx-highlight'></i> Toggle Highlights
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="showInsights()">
+                                    <i class='bx bx-bulb'></i> View Insights
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="showRelatedDocuments()">
+                                    <i class='bx bx-link'></i> Related Documents
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="downloadDocument()">
+                                    <i class='bx bx-download'></i> Download
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="document-navigation mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Table of Contents</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="toc-container">
+                                        <ul class="list-unstyled">
+                                            {% for section in document.sections %}
+                                            <li>
+                                                <a href="#section-{{ loop.index }}" class="toc-item">
+                                                    {{ section.title }}
+                                                </a>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="document-content">
+                            {% for section in document.sections %}
+                            <div id="section-{{ loop.index }}" class="document-section mb-4">
+                                <h4 class="section-title">{{ section.title }}</h4>
+                                <div class="section-content">
+                                    {{ section.content|safe }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Key Insights</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="insights-container">
+                            <ul class="list-group">
+                                {% for insight in document.insights %}
+                                <li class="list-group-item">
+                                    <i class='bx bx-check-circle text-success'></i>
+                                    {{ insight }}
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Related Documents</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Title</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for related in document.related_documents %}
+                                    <tr>
+                                        <td>{{ related.doc_type }}</td>
+                                        <td>{{ related.filing_date }}</td>
+                                        <td>{{ related.title|truncate(30) }}</td>
+                                        <td>
+                                            <a href="{{ url_for('document_detail', doc_id=related.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h4 class="card-title text-white mb-0">Ask Questions About This Document</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="nlp-query-container">
+                            <form id="document-query-form" action="{{ url_for('document_query') }}" method="post">
+                                <input type="hidden" name="doc_id" value="{{ document.id }}">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" name="query" placeholder="Ask a question about this document..." required>
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class='bx bx-search'></i> Ask
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <div class="query-suggestions mb-3">
+                                <h6>Suggested Questions:</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-sm btn-outline-primary suggestion-btn" data-query="What are the key risk factors mentioned?">Key risk factors</button>
+                                    <button class="btn btn-sm btn-outline-primary suggestion-btn" data-query="Summarize the financial performance">Financial performance summary</button>
+                                    <button class="btn btn-sm btn-outline-primary suggestion-btn" data-query="What are the company's growth strategies?">Growth strategies</button>
+                                    <button class="btn btn-sm btn-outline-primary suggestion-btn" data-query="How does this compare to previous periods?">Comparison to previous periods</button>
+                                </div>
+                            </div>
+                            
+                            <div id="query-result" class="query-result mt-4 d-none">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">Answer</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="query-answer"></div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class='bx bx-info-circle'></i> 
+                                                This answer was generated based on the content of this document.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights Modal -->
+    <div class="modal fade" id="insightsModal" tabindex="-1" aria-labelledby="insightsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="insightsModalLabel">Document Insights</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="insights-container">
+                        <h5>Key Insights</h5>
+                        <ul class="list-group mb-4">
+                            {% for insight in document.insights %}
+                            <li class="list-group-item">
+                                <i class='bx bx-check-circle text-success'></i>
+                                {{ insight }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        
+                        <h5>Financial Highlights</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>Current Period</th>
+                                        <th>Previous Period</th>
+                                        <th>Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for metric in document.financial_highlights %}
+                                    <tr>
+                                        <td>{{ metric.name }}</td>
+                                        <td>{{ metric.current }}</td>
+                                        <td>{{ metric.previous }}</td>
+                                        <td class="{{ 'text-success' if metric.change_positive else 'text-danger' }}">
+                                            {{ metric.change }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <h5>Management Commentary</h5>
+                        <blockquote class="blockquote">
+                            <p>{{ document.management_quote }}</p>
+                            <footer class="blockquote-footer">{{ document.management_name }}, {{ document.management_title }}</footer>
+                        </blockquote>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Documents Modal -->
+    <div class="modal fade" id="relatedDocumentsModal" tabindex="-1" aria-labelledby="relatedDocumentsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="relatedDocumentsModalLabel">Related Documents</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="relatedDocumentsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="same-company-tab" data-bs-toggle="tab" data-bs-target="#same-company" type="button" role="tab">Same Company</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="same-period-tab" data-bs-toggle="tab" data-bs-target="#same-period" type="button" role="tab">Same Period</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="similar-content-tab" data-bs-toggle="tab" data-bs-target="#similar-content" type="button" role="tab">Similar Content</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="relatedDocumentsTabContent">
+                        <div class="tab-pane fade show active" id="same-company" role="tabpanel" aria-labelledby="same-company-tab">
+                            <div class="table-responsive mt-3">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Date</th>
+                                            <th>Title</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for related in document.related_documents %}
+                                        <tr>
+                                            <td>{{ related.doc_type }}</td>
+                                            <td>{{ related.filing_date }}</td>
+                                            <td>{{ related.title }}</td>
+                                            <td>
+                                                <a href="{{ url_for('document_detail', doc_id=related.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="same-period" role="tabpanel" aria-labelledby="same-period-tab">
+                            <div class="table-responsive mt-3">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Company</th>
+                                            <th>Type</th>
+                                            <th>Date</th>
+                                            <th>Title</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for related in document.same_period_documents %}
+                                        <tr>
+                                            <td>{{ related.ticker }}</td>
+                                            <td>{{ related.doc_type }}</td>
+                                            <td>{{ related.filing_date }}</td>
+                                            <td>{{ related.title|truncate(30) }}</td>
+                                            <td>
+                                                <a href="{{ url_for('document_detail', doc_id=related.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="similar-content" role="tabpanel" aria-labelledby="similar-content-tab">
+                            <div class="table-responsive mt-3">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Company</th>
+                                            <th>Type</th>
+                                            <th>Date</th>
+                                            <th>Title</th>
+                                            <th>Similarity</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for related in document.similar_content_documents %}
+                                        <tr>
+                                            <td>{{ related.ticker }}</td>
+                                            <td>{{ related.doc_type }}</td>
+                                            <td>{{ related.filing_date }}</td>
+                                            <td>{{ related.title|truncate(30) }}</td>
+                                            <td>{{ related.similarity }}%</td>
+                                            <td>
+                                                <a href="{{ url_for('document_detail', doc_id=related.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-text">
+                    <p>&copy; 2025 Financial Knowledge Base | TNET & Competitors</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                        <i class='bx bx-up-arrow-alt'></i> Back to top
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/modern/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle suggestion buttons
+            const suggestionBtns = document.querySelectorAll('.suggestion-btn');
+            suggestionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const query = this.getAttribute('data-query');
+                    document.querySelector('input[name="query"]').value = query;
+                    document.getElementById('document-query-form').submit();
+                });
+            });
+            
+            // Handle document query form submission
+            document.getElementById('document-query-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const query = this.querySelector('input[name="query"]').value;
+                const docId = this.querySelector('input[name="doc_id"]').value;
+                
+                // Show loading state
+                const queryResult = document.getElementById('query-result');
+                const queryAnswer = document.getElementById('query-answer');
+                queryResult.classList.remove('d-none');
+                queryAnswer.innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Analyzing document and generating answer...</p>
+                    </div>
+                `;
+                
+                // In a real implementation, this would make an AJAX call to the server
+                // For now, we'll simulate with a timeout
+                setTimeout(() => {
+                    queryAnswer.innerHTML = `
+                        <p>Based on the document content, ${generateAnswer(query)}</p>
+                    `;
+                }, 1500);
+            });
+        });
+        
+        // Function to toggle highlights in the document
+        function toggleHighlights() {
+            const highlights = document.querySelectorAll('.highlight');
+            highlights.forEach(highlight => {
+                highlight.classList.toggle('active');
+            });
+        }
+        
+        // Function to show insights modal
+        function showInsights() {
+            const modal = new bootstrap.Modal(document.getElementById('insightsModal'));
+            modal.show();
+        }
+        
+        // Function to show related documents modal
+        function showRelatedDocuments() {
+            const modal = new bootstrap.Modal(document.getElementById('relatedDocumentsModal'));
+            modal.show();
+        }
+        
+        // Function to download document
+        function downloadDocument() {
+            // In a real implementation, this would trigger a download
+            alert('Document download started.');
+        }
+        
+        // Function to generate sample answers based on query
+        // In a real implementation, this would be handled by the NLP backend
+        function generateAnswer(query) {
+            query = query.toLowerCase();
+            
+            if (query.includes('risk') || query.includes('risks')) {
+                return "the key risk factors mentioned include: 1) Increased competition in the PEO industry, 2) Regulatory changes affecting employment and benefits administration, 3) Cybersecurity threats and data privacy concerns, 4) Economic downturns affecting small and medium-sized business clients, and 5) Challenges in maintaining client retention rates.";
+            } else if (query.includes('financial') || query.includes('performance')) {
+                return "the company reported strong financial performance with revenue growth of 9.2% year-over-year, reaching $1.25 billion. Gross margin improved to 32.7% from 31.5% in the previous year. Operating income increased by 12.3% to $140.5 million, and net income grew by 11.8% to $101.3 million. Earnings per share was $1.52, up from $1.36 in the prior year period.";
+            } else if (query.includes('growth') || query.includes('strategies')) {
+                return "the company's growth strategies include: 1) Expanding its vertical market focus to target high-growth industries, 2) Enhancing technology platforms to improve client experience, 3) Strategic acquisitions to expand service offerings and geographic reach, 4) Increasing penetration in the mid-market segment, and 5) Developing new value-added services to increase revenue per client.";
+            } else if (query.includes('compare') || query.includes('previous')) {
+                return "compared to previous periods, the company has shown consistent improvement across key metrics. Revenue growth accelerated from 7.8% in the previous year to 9.2% this year. Gross margin expanded by 120 basis points, and operating margin improved by 30 basis points. Client retention rate increased to 92% from 90% in the prior year, and the company added 15% more new clients than in the previous comparable period.";
+            } else {
+                return "the document provides comprehensive information about the company's operations, financial results, strategic initiatives, and market position. The management team expressed confidence in the company's ability to continue executing its growth strategy while maintaining strong profitability metrics. They highlighted technology investments and service expansion as key drivers for future growth.";
+            }
+        }
+    </script>
+</body>
+</html>

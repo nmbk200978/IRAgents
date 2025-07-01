@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare | Financial Knowledge Base</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/modern/styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-container">
+            <a class="navbar-brand" href="/">
+                <i class='bx bx-line-chart navbar-brand-icon'></i>
+                Market IQ
+            </a>
+            <button id="nav-toggle" class="d-md-none btn btn-primary" aria-expanded="false" aria-label="Toggle navigation">
+                <i class='bx bx-menu'></i>
+            </button>
+            <ul id="nav-menu" class="navbar-nav">
+                <li><a class="nav-link" href="/"><i class='bx bx-home'></i> Home</a></li>
+                <li><a class="nav-link" href="/search"><i class='bx bx-search'></i> Search</a></li>
+                <li><a class="nav-link" href="/metrics"><i class='bx bx-bar-chart-alt-2'></i> Metrics</a></li>
+                <li><a class="nav-link active" href="/compare"><i class='bx bx-git-compare'></i> Compare</a></li>
+                <li><a class="nav-link" href="/insights"><i class='bx bx-bulb'></i> Insights</a></li>
+                <li><a class="nav-link" href="/filings"><i class='bx bx-file'></i> Filings</a></li>
+                <li><a class="nav-link" href="/dashboard"><i class='bx bx-dashboard'></i> Dashboard</a></li>
+            </ul>
+            <button id="dark-mode-toggle" class="btn btn-sm btn-outline-secondary">
+                <i class='bx bx-moon'></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container mt-8">
+        <div class="row">
+            <div class="col-12">
+                <div class="search-container">
+                    <form id="nlp-search-form" action="/search" method="get">
+                        <i class='bx bx-search search-icon'></i>
+                        <input type="text" id="nlp-search-input" name="query" class="search-input" placeholder="Ask anything about TNET and competitors..." autocomplete="off">
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                    </form>
+                </div>
+                <div id="prompt-suggestions" class="prompt-suggestions"></div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Compare Companies</li>
+                    </ol>
+                </nav>
+                <h2 class="mb-4">Company Comparison</h2>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Select Companies to Compare</h3>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('compare') }}" method="post">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="company1" class="form-label">Company 1</label>
+                                    <select class="form-select company-selector" id="company1" name="company1" required>
+                                        <option value="">Select Company</option>
+                                        {% for company in companies %}
+                                        <option value="{{ company.ticker }}" {% if selected_companies and selected_companies[0] == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="company2" class="form-label">Company 2</label>
+                                    <select class="form-select company-selector" id="company2" name="company2" required>
+                                        <option value="">Select Company</option>
+                                        {% for company in companies %}
+                                        <option value="{{ company.ticker }}" {% if selected_companies and selected_companies[1] == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="company3" class="form-label">Company 3 (Optional)</label>
+                                    <select class="form-select company-selector" id="company3" name="company3">
+                                        <option value="">Select Company</option>
+                                        {% for company in companies %}
+                                        <option value="{{ company.ticker }}" {% if selected_companies and selected_companies|length > 2 and selected_companies[2] == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="metric_type" class="form-label">Metric Type</label>
+                                    <select class="form-select" id="metric_type" name="metric_type">
+                                        <option value="all" {% if metric_type == 'all' %}selected{% endif %}>All Metrics</option>
+                                        <option value="growth" {% if metric_type == 'growth' %}selected{% endif %}>Growth Metrics</option>
+                                        <option value="profitability" {% if metric_type == 'profitability' %}selected{% endif %}>Profitability Metrics</option>
+                                        <option value="efficiency" {% if metric_type == 'efficiency' %}selected{% endif %}>Efficiency Metrics</option>
+                                        <option value="valuation" {% if metric_type == 'valuation' %}selected{% endif %}>Valuation Metrics</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="time_period" class="form-label">Time Period</label>
+                                    <select class="form-select" id="time_period" name="time_period">
+                                        <option value="latest" {% if time_period == 'latest' %}selected{% endif %}>Latest Quarter</option>
+                                        <option value="1y" {% if time_period == '1y' %}selected{% endif %}>1 Year</option>
+                                        <option value="3y" {% if time_period == '3y' %}selected{% endif %}>3 Years</option>
+                                        <option value="5y" {% if time_period == '5y' %}selected{% endif %}>5 Years</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary">Compare Companies</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if comparison_data %}
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Financial Metrics Comparison</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        {% for company in selected_companies %}
+                                        <th>{{ company }}</th>
+                                        {% endfor %}
+                                        <th>Industry Avg</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for metric in comparison_data %}
+                                    <tr>
+                                        <td>{{ metric.name }}</td>
+                                        {% for value in metric.values %}
+                                        <td class="{{ 'text-success' if value.highlight == 'positive' else 'text-danger' if value.highlight == 'negative' else '' }}">
+                                            {{ value.formatted }}
+                                        </td>
+                                        {% endfor %}
+                                        <td>{{ metric.industry_avg }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Revenue Comparison</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="revenue-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Profit Margins</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="margin-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Growth Rates</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="growth-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Return Metrics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="return-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Performance Radar</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container" style="height: 400px;">
+                            <canvas id="radar-comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Key Insights</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for company in selected_companies %}
+                            <div class="col-md-4 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <h4 class="card-title mb-0">{{ company }}</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-unstyled">
+                                            {% for insight in company_insights[company] %}
+                                            <li class="mb-2">
+                                                <i class='bx bx-check-circle text-success'></i> {{ insight }}
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row mb-6">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header card-header-primary">
+                        <h3 class="card-title text-white mb-0">Understanding Financial Metrics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Growth Metrics</h5>
+                                <ul>
+                                    <li><strong>Revenue Growth:</strong> Year-over-year percentage increase in revenue</li>
+                                    <li><strong>EBITDA Growth:</strong> Year-over-year percentage increase in earnings before interest, taxes, depreciation, and amortization</li>
+                                    <li><strong>Net Income Growth:</strong> Year-over-year percentage increase in net income</li>
+                                    <li><strong>EPS Growth:</strong> Year-over-year percentage increase in earnings per share</li>
+                                </ul>
+                                
+                                <h5>Profitability Metrics</h5>
+                                <ul>
+                                    <li><strong>Gross Margin:</strong> Gross profit as a percentage of revenue</li>
+                                    <li><strong>Operating Margin:</strong> Operating income as a percentage of revenue</li>
+                                    <li><strong>Net Profit Margin:</strong> Net income as a percentage of revenue</li>
+                                    <li><strong>EBITDA Margin:</strong> EBITDA as a percentage of revenue</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Efficiency Metrics</h5>
+                                <ul>
+                                    <li><strong>Asset Turnover:</strong> Revenue divided by average total assets</li>
+                                    <li><strong>Inventory Turnover:</strong> Cost of goods sold divided by average inventory</li>
+                                    <li><strong>Receivables Turnover:</strong> Revenue divided by average accounts receivable</li>
+                                    <li><strong>Revenue per Employee:</strong> Total revenue divided by number of employees</li>
+                                </ul>
+                                
+                                <h5>Return Metrics</h5>
+                                <ul>
+                                    <li><strong>Return on Assets (ROA):</strong> Net income divided by average total assets</li>
+                                    <li><strong>Return on Equity (ROE):</strong> Net income divided by average shareholder equity</li>
+                                    <li><strong>Return on Invested Capital (ROIC):</strong> Net operating profit after tax divided by invested capital</li>
+                                    <li><strong>Return on Capital Employed (ROCE):</strong> EBIT divided by capital employed</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-text">
+                    <p>&copy; 2025 Financial Knowledge Base | TNET & Competitors</p>
+                </div>
+                <div>
+                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                        <i class='bx bx-up-arrow-alt'></i> Back to top
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/modern/main.js') }}"></script>
+    {% if comparison_data %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sample data for charts - in a real implementation, this would come from the backend
+            const companies = {{ selected_companies|tojson }};
+            const colors = [
+                'rgba(37, 99, 235, 0.7)',
+                'rgba(245, 158, 11, 0.7)',
+                'rgba(16, 185, 129, 0.7)'
+            ];
+            const borderColors = [
+                'rgb(37, 99, 235)',
+                'rgb(245, 158, 11)',
+                'rgb(16, 185, 129)'
+            ];
+            
+            // Revenue comparison chart
+            const revenueCtx = document.getElementById('revenue-comparison-chart').getContext('2d');
+            new Chart(revenueCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['2020', '2021', '2022', '2023', '2024'],
+                    datasets: companies.map((company, index) => ({
+                        label: company,
+                        data: getRevenueData(company),
+                        backgroundColor: colors[index],
+                        borderColor: borderColors[index],
+                        borderWidth: 1
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Annual Revenue (Billions $)'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: $${context.raw}B`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value + 'B';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Margin comparison chart
+            const marginCtx = document.getElementById('margin-comparison-chart').getContext('2d');
+            new Chart(marginCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Gross Margin', 'Operating Margin', 'Net Margin', 'EBITDA Margin'],
+                    datasets: companies.map((company, index) => ({
+                        label: company,
+                        data: getMarginData(company),
+                        backgroundColor: colors[index],
+                        borderColor: borderColors[index],
+                        borderWidth: 1
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Profit Margins (%)'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Growth comparison chart
+            const growthCtx = document.getElementById('growth-comparison-chart').getContext('2d');
+            new Chart(growthCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Revenue Growth', 'EBITDA Growth', 'Net Income Growth', 'EPS Growth'],
+                    datasets: companies.map((company, index) => ({
+                        label: company,
+                        data: getGrowthData(company),
+                        backgroundColor: colors[index],
+                        borderColor: borderColors[index],
+                        borderWidth: 1
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Growth Rates (%)'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Return metrics chart
+            const returnCtx = document.getElementById('return-comparison-chart').getContext('2d');
+            new Chart(returnCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['ROA', 'ROE', 'ROIC', 'ROCE'],
+                    datasets: companies.map((company, index) => ({
+                        label: company,
+                        data: getReturnData(company),
+                        backgroundColor: colors[index],
+                        borderColor: borderColors[index],
+                        borderWidth: 1
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Return Metrics (%)'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Radar chart
+            const radarCtx = document.getElementById('radar-comparison-chart').getContext('2d');
+            new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        'Revenue Growth',
+                        'Gross Margin',
+                        'Operating Margin',
+                        'Net Margin',
+                        'ROE',
+                        'Employee Productivity'
+                    ],
+                    datasets: companies.map((company, index) => ({
+                        label: company,
+                        data: getRadarData(company),
+                        fill: true,
+                        backgroundColor: colors[index].replace('0.7', '0.2'),
+                        borderColor: borderColors[index],
+                        pointBackgroundColor: borderColors[index],
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: borderColors[index]
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Performance Metrics Comparison'
+                        }
+                    }
+                }
+            });
+            
+            // Helper functions to generate sample data
+            function getRevenueData(company) {
+                switch(company) {
+                    case 'TNET':
+                        return [0.95, 1.05, 1.15, 1.25, 1.35];
+                    case 'ADP':
+                        return [14.5, 15.2, 16.0, 16.8, 17.5];
+                    case 'PAYX':
+                        return [3.8, 4.1, 4.5, 4.9, 5.2];
+                    case 'NSP':
+                        return [4.3, 4.7, 5.1, 5.6, 6.0];
+                    case 'PYCR':
+                        return [0.32, 0.36, 0.39, 0.43, 0.48];
+                    case 'PCTY':
+                        return [0.75, 0.82, 0.89, 0.98, 1.08];
+                    default:
+                        return [0, 0, 0, 0, 0];
+                }
+            }
+            
+            function getMarginData(company) {
+                switch(company) {
+                    case 'TNET':
+                        return [32.7, 11.2, 8.1, 15.5];
+                    case 'ADP':
+                        return [45.0, 22.5, 17.3, 28.2];
+                    case 'PAYX':
+                        return [41.2, 19.8, 15.2, 25.7];
+                    case 'NSP':
+                        return [30.5, 10.8, 7.9, 14.8];
+                    case 'PYCR':
+                        return [28.4, 8.7, 5.3, 12.6];
+                    case 'PCTY':
+                        return [31.8, 9.5, 6.8, 13.9];
+                    default:
+                        return [0, 0, 0, 0];
+                }
+            }
+            
+            function getGrowthData(company) {
+                switch(company) {
+                    case 'TNET':
+                        return [9.2, 10.5, 12.3, 11.8];
+                    case 'ADP':
+                        return [6.2, 7.5, 8.1, 7.9];
+                    case 'PAYX':
+                        return [7.8, 8.2, 9.0, 8.7];
+                    case 'NSP':
+                        return [8.1, 7.8, 8.5, 8.3];
+                    case 'PYCR':
+                        return [12.3, 13.5, 15.2, 14.8];
+                    case 'PCTY':
+                        return [10.5, 11.2, 12.8, 12.3];
+                    default:
+                        return [0, 0, 0, 0];
+                }
+            }
+            
+            function getReturnData(company) {
+                switch(company) {
+                    case 'TNET':
+                        return [8.2, 18.5, 12.3, 14.5];
+                    case 'ADP':
+                        return [15.8, 42.1, 28.5, 32.7];
+                    case 'PAYX':
+                        return [14.2, 38.7, 25.3, 29.8];
+                    case 'NSP':
+                        return [9.5, 21.3, 14.8, 17.2];
+                    case 'PYCR':
+                        return [6.8, 15.8, 10.2, 12.5];
+                    case 'PCTY':
+                        return [7.5, 17.2, 11.8, 14.2];
+                    default:
+                        return [0, 0, 0, 0];
+                }
+            }
+            
+            function getRadarData(company) {
+                switch(company) {
+                    case 'TNET':
+                        return [9.2, 32.7, 11.2, 8.1, 18.5, 85];
+                    case 'ADP':
+                        return [6.2, 45.0, 22.5, 17.3, 42.1, 92];
+                    case 'PAYX':
+                        return [7.8, 41.2, 19.8, 15.2, 38.7, 88];
+                    case 'NSP':
+                        return [8.1, 30.5, 10.8, 7.9, 21.3, 82];
+                    case 'PYCR':
+                        return [12.3, 28.4, 8.7, 5.3, 15.8, 75];
+                    case 'PCTY':
+                        return [10.5, 31.8, 9.5, 6.8, 17.2, 80];
+                    default:
+                        return [0, 0, 0, 0, 0, 0];
+                }
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>

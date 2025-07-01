@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial KB - Filings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">Financial Knowledge Base</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/search">Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/metrics">Metrics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/compare">Compare</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/insights">Insights</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/filings">Filings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">SEC Filings</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="card-title mb-0">SEC Filings</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('filings') }}" method="get">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="ticker" class="form-label">Company</label>
+                                        <select class="form-select" id="ticker" name="ticker">
+                                            <option value="">All Companies</option>
+                                            {% for company in companies %}
+                                            <option value="{{ company.ticker }}" {% if selected_ticker == company.ticker %}selected{% endif %}>{{ company.ticker }} - {{ company.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="doc_type" class="form-label">Document Type</label>
+                                        <select class="form-select" id="doc_type" name="doc_type">
+                                            <option value="">All Types</option>
+                                            <option value="10-K" {% if selected_doc_type == '10-K' %}selected{% endif %}>10-K (Annual Report)</option>
+                                            <option value="10-Q" {% if selected_doc_type == '10-Q' %}selected{% endif %}>10-Q (Quarterly Report)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="limit" class="form-label">Number of Results</label>
+                                        <select class="form-select" id="limit" name="limit">
+                                            <option value="10" {% if limit == 10 %}selected{% endif %}>10</option>
+                                            <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+                                            <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+                                            <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            Filing Results 
+                            {% if selected_ticker %}for {{ selected_ticker }}{% endif %}
+                            {% if selected_doc_type %}({{ selected_doc_type }}){% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if filings %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Company</th>
+                                            <th>Type</th>
+                                            <th>Date</th>
+                                            <th>Title</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for filing in filings %}
+                                        <tr>
+                                            <td>{{ filing.ticker }}</td>
+                                            <td>{{ filing.doc_type }}</td>
+                                            <td>{{ filing.filing_date }}</td>
+                                            <td>{{ filing.title|truncate(50) }}</td>
+                                            <td>
+                                                {% if filing.url %}
+                                                <a href="{{ filing.url }}" target="_blank" class="btn btn-sm btn-outline-primary">EDGAR</a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                No filings found matching the selected criteria.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">Understanding SEC Filings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Form 10-K (Annual Report)</h6>
+                                <p>A comprehensive report filed annually by public companies about their financial performance. The report includes:</p>
+                                <ul>
+                                    <li>Company history, organizational structure, and business operations</li>
+                                    <li>Financial statements for the fiscal year</li>
+                                    <li>Management's discussion and analysis (MD&A)</li>
+                                    <li>Risk factors and controls</li>
+                                    <li>Executive compensation and corporate governance</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Form 10-Q (Quarterly Report)</h6>
+                                <p>A report filed quarterly by public companies to provide a continuing view of financial position during the year. The report includes:</p>
+                                <ul>
+                                    <li>Unaudited financial statements for the quarter</li>
+                                    <li>Management's discussion of financial condition</li>
+                                    <li>Disclosures about market risk</li>
+                                    <li>Internal controls</li>
+                                    <li>Legal proceedings and other significant events</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light text-center text-lg-start mt-5">
+        <div class="container p-4">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p>Financial Knowledge Base for TNET and Competitors</p>
+                </div>
+            </div>
+        </div>
+        <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
+            © 2025 Financial Knowledge Base
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
