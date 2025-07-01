@@ -6,8 +6,9 @@ import sys
 import os
 import sqlite3
 from flask import Flask, render_template, request, jsonify, redirect, url_for
-from kb_interface import KnowledgeBaseInterface
-from nlp_integration import get_nlp_integration
+
+from src.kb_interface import KnowledgeBaseInterface
+from src.nlp_integration import get_nlp_integration
 
 # Configure application
 app = Flask(__name__)

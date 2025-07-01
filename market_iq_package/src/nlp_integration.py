@@ -5,7 +5,7 @@ This module connects the NLP search engine with the Flask web routes.
 
 import os
 from flask import request, jsonify
-from nlp_search import NLPSearchEngine
+from src.nlp_search import NLPSearchEngine
 
 class NLPSearchIntegration:
     """
